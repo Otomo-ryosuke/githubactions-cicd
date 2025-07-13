@@ -66,8 +66,64 @@ functions-framework --target=github_actions_cicd --port=8080
 
 ### 必要な GitHub Secrets
 
+#### Workload Identity Federation（推奨）
+
+- `GCP_PROJECT_ID` : GCP プロジェクト ID
+- `WORKLOAD_IDENTITY_PROVIDER` : Workload Identity Provider の URL
+- `GCP_SERVICE_ACCOUNT` : サービスアカウントのメールアドレス
+
+#### 従来のサービスアカウントキー（非推奨）
+
 - `GCP_PROJECT_ID` : GCP プロジェクト ID
 - `GCP_SA_KEY` : サービスアカウントの JSON キー
+
+### Workload Identity Federation 設定手順
+
+1. **Workload Identity Pool の作成**
+
+```bash
+gcloud iam workload-identity-pools create "github-actions-pool" \
+  --location="global" \
+  --display-name="GitHub Actions Pool"
+```
+
+2. **Workload Identity Provider の作成**
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+  --workload-identity-pool="github-actions-pool" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --location="global" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository"
+```
+
+3. **サービスアカウントの作成**
+
+```bash
+gcloud iam service-accounts create "github-actions-sa" \
+  --display-name="GitHub Actions Service Account"
+```
+
+4. **IAM ポリシーの設定**
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding "github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/YOUR_GITHUB_REPO"
+```
+
+5. **Cloud Functions 権限の付与**
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/cloudfunctions.developer"
+```
+
+6. **GitHub Secrets の設定**
+
+- `WORKLOAD_IDENTITY_PROVIDER`: `projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider`
+- `GCP_SERVICE_ACCOUNT`: `github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com`
 
 ### デプロイ先の関数名・リージョン等はワークフロー内で指定しています。
 
@@ -106,6 +162,7 @@ gcloud functions deploy github-actions-cicd \
 - Flask 等の Web フレームワークは使っていません。
 - レスポンスは文字列/JSON どちらも返せます。
 - GCP のサービスアカウント権限や API 有効化は事前に行ってください。
+- Workload Identity Federation を使用することで、サービスアカウントキーを GitHub Secrets に保存する必要がなくなります。
 
 ---
 
