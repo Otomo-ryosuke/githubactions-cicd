@@ -43,7 +43,7 @@ jobs:
             --trigger-http \
             --no-allow-unauthenticated \
             --memory=256Mi \
-            --timeout=60s
+            --timeout=600s
 
       - name: Get function URL
         id: get-url
