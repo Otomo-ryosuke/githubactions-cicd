@@ -42,7 +42,7 @@ jobs:
             --no-allow-unauthenticated \
             --memory=256Mi \
             --timeout=600s \
-            --build-service-account=${{ env.SERVICE_ACCOUNT }}
+            --build-service-account=projects/chrome-reserve-462911-k1/serviceAccounts/${{ env.SERVICE_ACCOUNT }}
 
       - name: Get function URL
         id: get-url
