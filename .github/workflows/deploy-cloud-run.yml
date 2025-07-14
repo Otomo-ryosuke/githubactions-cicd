@@ -34,16 +34,15 @@ jobs:
 
       - name: Deploy to Cloud Run Functions
         run: |
-          gcloud functions deploy ${{ env.FUNCTION_NAME }} \
-            --gen2 \
-            --runtime=python311 \
+          gcloud run deploy ${{ env.FUNCTION_NAME }} \
+            --base-image=python311 \
             --region=${{ env.REGION }} \
             --source=. \
-            --entry-point=github_actions_cicd \
-            --trigger-http \
+            --function=github_actions_cicd \
             --no-allow-unauthenticated \
             --memory=256Mi \
-            --timeout=600s
+            --timeout=600s \
+            --build-service-account=${{ env.SERVICE_ACCOUNT }}
 
       - name: Get function URL
         id: get-url
